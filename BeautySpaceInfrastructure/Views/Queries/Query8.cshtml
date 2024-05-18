@@ -1,0 +1,47 @@
+﻿@{
+    ViewData["Title"] = "Query8";
+}
+
+<div class="content">
+    <div class="text-center">
+        <h2>Запити</h2>
+    </div>
+
+    <div id="clientsByEmployees">
+        <h3>Запит 8:</h3>
+        <h4>Знайти клієнтів, у якого усі бронювання тільки до тих самих працівників як і у обраного клієнта</h4>
+        <form asp-controller="Queries" asp-action="Query8" method="post">
+            <div class="form-group">
+                <label for="clientId">Клієнт</label>
+                <select class="form-control" id="clientId" name="clientId" asp-items="ViewBag.Clients" required></select>
+            </div>
+            <div style="display: flex; margin-top: 15px; gap: 15px;">
+                <button type="submit" class="btn btn-primary">Надіслати запит</button>
+                <a class="btn-back-new" asp-action="Index">Повернутися до запитів</a>
+            </div>
+        </form>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Ім'я</th>
+                    <th>Прізвище</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var client in Model)
+                {
+                    <tr>
+                        <td>@client.FirstName</td>
+                        <td>@client.LastName</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (!string.IsNullOrEmpty(ViewBag.Message))
+        {
+            <p>@ViewBag.Message</p>
+        }
+
+    </div>
+
+</div>

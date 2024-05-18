@@ -169,5 +169,143 @@ namespace BeautySpaceInfrastructure.Controllers
 
         //Запит 2: Знаходження імен всіх клієнтів, у яких кількість бронювань така сама, як і у клієнта C
 
+
+
+        /*-------------*/
+        public async Task<IActionResult> Query6(int? employeeId)
+        {
+            ViewBag.Employees = new SelectList(_context.Employees, "Id", "FirstName");
+
+            if (employeeId == null)
+            {
+                return View(new List<Employee>());
+            }
+
+            var employees = await _context.Employees
+                .FromSqlInterpolated($@"
+        SELECT e2.*
+        FROM Employees e2
+        WHERE e2.Id IN (
+            SELECT es2.EmployeeId
+            FROM EmployeeServices es2
+            GROUP BY es2.EmployeeId
+            HAVING COUNT(DISTINCT es2.ServiceId) = (
+                SELECT COUNT(DISTINCT es1.ServiceId)
+                FROM EmployeeServices es1
+                WHERE es1.EmployeeId = {employeeId}
+            )
+            AND NOT EXISTS (
+                SELECT 1
+                FROM EmployeeServices es1
+                WHERE es1.EmployeeId = {employeeId}
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM EmployeeServices es2_inner
+                    WHERE es2_inner.EmployeeId = es2.EmployeeId
+                    AND es2_inner.ServiceId = es1.ServiceId
+                )
+            )
+            AND es2.EmployeeId != {employeeId}
+        )
+    ").ToListAsync();
+
+            if (!employees.Any())
+            {
+                ViewBag.Message = "Працівники, які надають точно такі ж послуги, не знайдено.";
+            }
+
+            return View(employees);
+        }
+
+
+
+
+        public async Task<IActionResult> Query7(int? clientId)
+        {
+            ViewBag.Clients = new SelectList(_context.Clients, "Id", "FirstName");
+
+            if (clientId == null)
+            {
+                return View(new List<Client>());
+            }
+
+            var clients = await _context.Clients
+                .FromSqlInterpolated($@"
+    SELECT c2.*
+    FROM Clients c2
+    JOIN Reservations r2 ON c2.Id = r2.ClientId
+    GROUP BY c2.Id, c2.FirstName, c2.LastName, c2.PhoneNumber, c2.Birthday, c2.Email
+    HAVING COUNT(r2.Id) = 
+    (
+        SELECT COUNT(r3.Id)
+        FROM Reservations r3
+        WHERE r3.ClientId = {clientId}
+    )
+    AND c2.Id != {clientId}
+").ToListAsync();
+
+            if (!clients.Any())
+            {
+                ViewBag.Message = "Клієнти з такою ж кількістю бронювань не знайдено.";
+            }
+
+            return View(clients);
+        }
+
+
+        //Знайти клієнтів, у якого усі бронювання створені тільки до тих самих працівників, які у обраного клієнта 
+        public async Task<IActionResult> Query8(int? clientId)
+        {
+            ViewBag.Clients = new SelectList(_context.Clients, "Id", "FirstName");
+
+            if (clientId == null)
+            {
+                return View(new List<Client>());
+            }
+
+            var clients = await _context.Clients
+                .FromSqlInterpolated($@"
+    SELECT c2.*
+    FROM Clients c2
+    WHERE NOT EXISTS 
+    (
+        SELECT es1.EmployeeId
+        FROM Reservations r1
+        JOIN TimeSlots ts1 ON r1.TimeSlotId = ts1.Id
+        JOIN EmployeeServices es1 ON ts1.EmployeeServiceId = es1.Id
+        WHERE r1.ClientId = {clientId}
+        EXCEPT
+        SELECT es2.EmployeeId
+        FROM Reservations r2
+        JOIN TimeSlots ts2 ON r2.TimeSlotId = ts2.Id
+        JOIN EmployeeServices es2 ON ts2.EmployeeServiceId = es2.Id
+        WHERE r2.ClientId = c2.Id
+    )
+    AND NOT EXISTS 
+    (
+        SELECT es3.EmployeeId
+        FROM Reservations r3
+        JOIN TimeSlots ts3 ON r3.TimeSlotId = ts3.Id
+        JOIN EmployeeServices es3 ON ts3.EmployeeServiceId = es3.Id
+        WHERE r3.ClientId = c2.Id
+        EXCEPT
+        SELECT es4.EmployeeId
+        FROM Reservations r4
+        JOIN TimeSlots ts4 ON r4.TimeSlotId = ts4.Id
+        JOIN EmployeeServices es4 ON ts4.EmployeeServiceId = es4.Id
+        WHERE r4.ClientId = {clientId}
+    )
+    AND c2.Id != {clientId}
+").ToListAsync();
+
+            if (!clients.Any())
+            {
+                ViewBag.Message = "Клієнти, у яких усі бронювання тільки до тих самих працівників, не знайдено.";
+            }
+
+            return View(clients);
+        }
+
+
     }
 }
