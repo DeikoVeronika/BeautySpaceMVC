@@ -1,0 +1,51 @@
+﻿﻿@{
+    ViewData["Title"] = "Query2";
+}
+
+<div class="content">
+    <div class="text-center">
+        <h2>Запити</h2>
+    </div>
+
+    <div id="clientsByEmployeeName">
+        <h3>Запит 2:</h3>
+        <h4>Знайти клієнтів, які створили бронювання у працівника з обраним ім'ям</h4>
+        <form asp-controller="Queries" asp-action="Query2" method="post">
+            <div class="form-group">
+                <label for="employeeFirstName">Ім'я працівника</label>
+                <select class="form-control" id="employeeFirstName" name="employeeFirstName" asp-items="ViewBag.EmployeeNames" required></select>
+            </div>
+            <div style="display: flex; margin-top: 15px; gap: 15px;">
+                <button type="submit" class="btn btn-primary">Надіслати запит</button>
+                <a class="btn-back-new" asp-action="Index">Повернутися до запитів</a>
+            </div>
+        </form>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Ім'я</th>
+                    <th>Прізвище</th>
+                    <th>Номер телефону</th>
+                    <th>Дата народження</th>
+                    <th>Email</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var client in Model)
+                {
+                    <tr>
+                        <td>@client.FirstName</td>
+                        <td>@client.LastName</td>
+                        <td>@client.PhoneNumber</td>
+                        <td>@client.Birthday</td>
+                        <td>@client.Email</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (!string.IsNullOrEmpty(ViewBag.Message))
+        {
+            <p>@ViewBag.Message</p>
+        }
+    </div>
+</div>
