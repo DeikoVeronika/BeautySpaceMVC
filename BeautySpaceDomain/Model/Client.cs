@@ -40,4 +40,12 @@ public partial class Client : Entity
     public string Email { get; set; } = null!;
 
     public virtual ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
+
+    public string FullName
+    {
+        get
+        {
+            return $" {LastName} {FirstName}";
+        }
+    }
 }

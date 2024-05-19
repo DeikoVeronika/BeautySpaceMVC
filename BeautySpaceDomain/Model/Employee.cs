@@ -47,4 +47,12 @@ public partial class Employee : Entity
 
     public virtual Position Position { get; set; } = null!;
 
+    public string FullName
+    {
+        get
+        {
+            return $" {LastName} {FirstName}";
+        }
+    }
+
 }

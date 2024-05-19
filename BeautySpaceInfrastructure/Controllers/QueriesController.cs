@@ -23,7 +23,7 @@ namespace BeautySpaceInfrastructure.Controllers
         //Запит 1: Повернути всі послуги обраної категорії, вартість яких більша за вказану суму (дві таблиці: Services та Categories)
         public async Task<IActionResult> Query1(int? categoryId, decimal? minPrice)
         {
-            ViewBag.Categories = new SelectList(_context.Categories, "Id", "Name");
+            ViewBag.Categories = new SelectList(_context.Categories.OrderBy(c => c.Name), "Id", "Name");
 
             if (categoryId == null || minPrice == null)
             {
@@ -51,9 +51,10 @@ namespace BeautySpaceInfrastructure.Controllers
         //Запит 2: Знайти клієнтів, які створили хоча б одне бронювання у працівника з обраним іменем (складний?)
         public async Task<IActionResult> Query2(string employeeFirstName)
         {
-            var employeeNames = await _context.Employees.Select(e => e.FirstName).Distinct().ToListAsync();
+            var employeeNames = await _context.Employees.Select(e => e.FirstName).Distinct().OrderBy(name => name).ToListAsync();
 
             ViewBag.EmployeeNames = new SelectList(employeeNames);
+
 
             if (string.IsNullOrEmpty(employeeFirstName))
             {
@@ -82,7 +83,7 @@ namespace BeautySpaceInfrastructure.Controllers
         //Запит 3: Знайти назви та вартість всіх послуг усіх працівників із певної посади
         public async Task<IActionResult> Query3(int? positionId)
         {
-            ViewBag.Positions = new SelectList(_context.Positions, "Id", "Name");
+            ViewBag.Positions = new SelectList(_context.Positions.OrderBy(p => p.Name), "Id", "Name");
 
             if (positionId == null)
             {
@@ -203,7 +204,7 @@ namespace BeautySpaceInfrastructure.Controllers
         //Запит 6: Знаходження імен всіх працівників, які надають точно такі ж послуги як і обраний працівник
         public async Task<IActionResult> Query6(int? employeeId)
         {
-            ViewBag.Employees = new SelectList(_context.Employees, "Id", "FirstName");
+            ViewBag.Employees = new SelectList(_context.Employees.OrderBy(c => c.LastName), "Id", "FullName");
 
             if (employeeId == null)
             {
@@ -251,7 +252,7 @@ namespace BeautySpaceInfrastructure.Controllers
         // Запит 7: Знаходження імен всіх клієнтів, у яких кількість бронювань така сама, як і у обраного клієнта
         public async Task<IActionResult> Query7(int? clientId)
         {
-            ViewBag.Clients = new SelectList(_context.Clients, "Id", "FirstName");
+            ViewBag.Clients = new SelectList(_context.Clients.OrderBy(c => c.LastName), "Id", "FullName");
 
             if (clientId == null)
             {
@@ -284,7 +285,7 @@ namespace BeautySpaceInfrastructure.Controllers
         // Запит 8: Знайти клієнтів, у яких усі бронювання створені тільки до тих самих працівників як і у обраного клієнта
         public async Task<IActionResult> Query8(int? clientId)
         {
-            ViewBag.Clients = new SelectList(_context.Clients, "Id", "FirstName");
+            ViewBag.Clients = new SelectList(_context.Clients.OrderBy(c => c.LastName), "Id", "FullName");
 
             if (clientId == null)
             {
