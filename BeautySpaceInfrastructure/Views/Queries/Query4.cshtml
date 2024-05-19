@@ -1,0 +1,51 @@
+﻿﻿@{
+    ViewData["Title"] = "Query4";
+}
+
+<div class="content">
+    <div class="text-center">
+        <h2>Запити</h2>
+    </div>
+
+    <div id="clientsByTotalReservationCost">
+        <h3>Запит 4:</h3>
+        <h4>Повернути всіх клієнтів, у яких загальна сума їхніх бронювань перевищує задану величину</h4>
+        <form asp-controller="Queries" asp-action="Query4" method="post">
+            <div class="form-group">
+                <label for="totalReservationCost">Загальна сума бронювань</label>
+                <input type="text" class="form-control" id="totalReservationCost" placeholder="Введіть загальну суму бронювань" name="totalReservationCost" required>
+            </div>
+            <div style="display: flex; margin-top: 15px; gap: 15px;">
+                <button type="submit" class="btn btn-primary">Надіслати запит</button>
+                <a class="btn-back-new" asp-action="Index">Повернутися до запитів</a>
+            </div>
+        </form>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Ім'я</th>
+                    <th>Прізвище</th>
+                    <th>Номер телефону</th>
+                    <th>Email</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var client in Model)
+                {
+                    <tr>
+                        <td>@client.FirstName</td>
+                        <td>@client.LastName</td>
+                        <td>@client.PhoneNumber</td>
+                        <td>@client.Email</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (!string.IsNullOrEmpty(ViewBag.Message))
+        {
+            <p>@ViewBag.Message</p>
+        }
+
+    </div>
+
+</div>

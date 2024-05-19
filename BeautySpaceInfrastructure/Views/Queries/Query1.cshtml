@@ -1,0 +1,67 @@
+﻿﻿
+@{
+    ViewData["Title"] = "Query1";
+}
+
+<div class="content">
+    <div class="text-center">
+        <h2>Запити</h2>
+    </div>
+
+    <div id="servicesByCategoryAndPrice">
+        <h3>Запит 1:</h3>
+        <h4>Повернути всі послуги обраної категорії, вартість яких більша за вказану суму</h4>
+        <form asp-controller="Queries" asp-action="Query1" method="post">
+            <div class="form-group">
+                <label for="categoryId">Категорія</label>
+                <select class="form-control" id="categoryId" name="categoryId" asp-items="ViewBag.Categories" required></select>
+            </div>
+            <div class="form-group">
+                <label for="minPrice">Мінімальна вартість</label>
+                <input type="text" class="form-control" id="minPrice" placeholder="Введіть вартість послуги" name="minPrice" required>
+                <span id="errorSpan" style="color: red;"></span>
+            </div>
+            <div style="display: flex; margin-top: 15px; gap: 15px;">
+                <button type="submit" class="btn btn-primary">Надіслати запит</button>
+                <a class="btn-back-new" asp-action="Index">Повернутися до запитів</a>
+            </div>
+        </form>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Назва послуги</th>
+                    <th>Ціна</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var service in Model)
+                {
+                    <tr>
+                        <td>@service.Name</td>
+                        <td>@service.Price</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (!string.IsNullOrEmpty(ViewBag.Message))
+        {
+            <p>@ViewBag.Message</p>
+        }
+
+    </div>
+
+</div>
+
+<script>
+    document.getElementById('minPrice').addEventListener('input', function (event) {
+        let inputValue = event.target.value;
+        let errorSpan = document.getElementById('errorSpan');
+
+        if (/^\d+$/.test(inputValue)) {
+            errorSpan.textContent = '';
+        } else {
+            event.target.value = '';
+            errorSpan.textContent = 'Будь ласка, введіть лише цифрові символи.';
+        }
+    });
+</script>
