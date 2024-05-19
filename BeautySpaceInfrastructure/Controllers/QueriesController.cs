@@ -27,13 +27,8 @@ namespace BeautySpaceInfrastructure.Controllers
 
             if (categoryId == null || minPrice == null)
             {
-                // Повернути порожню модель, щоб користувач міг ввести значення
                 return View(new List<Service>());
             }
-
-            //var services = await _context.Services
-            //    .FromSqlRaw("SELECT * FROM Services WHERE CategoryId = {0} AND Price > {1}", categoryId, minPrice)
-            //    .ToListAsync();
 
             var services = await _context.Services
                 .FromSqlInterpolated($@"SELECT * FROM Services WHERE CategoryId = {categoryId} AND Price > {minPrice}")
@@ -163,48 +158,18 @@ namespace BeautySpaceInfrastructure.Controllers
             return View(employees);
         }
 
-
-
-
-
-
-
-
-
-
-        //Запит 4 : кількість бронювань, які здійснив конкретний клієнт у конкретного працівника. (чотири таблиці: Reservations, Clients, EmployeeServices та Employees)
-
-
-        /*
-         Reservations: Ця таблиця містить інформацію про резервації. Вона має такі атрибути: Id, ClientId, Info, TimeSlotId.
-        Clients: Ця таблиця містить інформацію про клієнтів. Вона має такі атрибути: Id, FirstName, LastName, PhoneNumber, Birthday, Email.
-        Positions: Ця таблиця містить інформацію про посади. Вона має такі атрибути: Id, Name.
-        Employees: Ця таблиця містить інформацію про співробітників. Вона має такі атрибути: Id, FirstName, LastName, PositionId, EmployeePortrait, PhoneNumber.
-        TimeSlots: Ця таблиця містить інформацію про часові слоти. Вона має такі атрибути: Id, EmployeeServiceId, Date, StartTime, EndTime, IsBooked.
-        EmployeeServices: Ця таблиця містить інформацію про послуги, які надають співробітники. Вона має такі атрибути: Id, ServiceID, EmployeeID.
-        Services: Ця таблиця містить інформацію про послуги. Вона має такі атрибути: Id, Name, Description, Price, CategoryID.
-        Categories: Ця таблиця містить інформацію про категорії послуг. Вона має такі атрибути: Id, Name.
-        Зв’язки між цими таблицями встановлені за допомогою ліній, які їх з’єднують, що вказує на обмеження зовнішніх ключів. Схема, схоже, призначена для системи резервування або бронювання призначень, де клієнти можуть бронювати часові слоти для різних послуг, які надають співробітники, які мають конкретні ролі або посади.*/
-
-
-        //Запит на отримання всіх бронювань конкретного клієнта: Використовуються дві таблиці - Reservations та TimeSlots.
-        //Запит на отримання всіх послуг, які надає конкретний співробітник: Використовуються дві таблиці - Services та EmployeeServices.
-        //Запит на отримання імені та прізвища співробітника, який надає конкретну послугу: Використовуються три таблиці - Employees, EmployeeServices та Services.
-        //Запит на отримання всіх бронювань на конкретну дату: Використовуються три таблиці - Reservations, Clients та TimeSlots.
-
-        //Параметризован запити
-
-        //Запит 1: Знаходження імен всіх працівників, які надають точно такі ж послуги, як і працівник E
-
-        //Запит 2: Знаходження імен всіх клієнтів, у яких кількість бронювань така сама, як і у клієнта C
-
-
-
-        /*-------------*/
         //Запит 6: Знаходження імен всіх працівників, які надають точно такі ж послуги як і обраний працівник
         public async Task<IActionResult> Query6(int? employeeId)
         {
-            ViewBag.Employees = new SelectList(_context.Employees.OrderBy(c => c.LastName), "Id", "FullName");
+            // Вибір лише працівників з хоча б одним бронюванням
+            var employeesWithReservations = await _context.Employees
+                .Where(e => _context.Reservations
+                    .Join(_context.TimeSlots, r => r.TimeSlotId, ts => ts.Id, (r, ts) => new { r, ts })
+                    .Any(rt => rt.ts.EmployeeService.EmployeeId == e.Id))
+                .OrderBy(e => e.LastName)
+                .ToListAsync();
+
+            ViewBag.Employees = new SelectList(employeesWithReservations, "Id", "FullName");
 
             if (employeeId == null)
             {
@@ -213,31 +178,31 @@ namespace BeautySpaceInfrastructure.Controllers
 
             var employees = await _context.Employees
                 .FromSqlInterpolated($@"
-                SELECT e2.*
-                FROM Employees e2
-                WHERE e2.Id IN (
-                    SELECT es2.EmployeeId
-                    FROM EmployeeServices es2
-                    GROUP BY es2.EmployeeId
-                    HAVING COUNT(DISTINCT es2.ServiceId) = (
-                        SELECT COUNT(DISTINCT es1.ServiceId)
-                        FROM EmployeeServices es1
-                        WHERE es1.EmployeeId = {employeeId}
-                    )
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM EmployeeServices es1
-                        WHERE es1.EmployeeId = {employeeId}
-                        AND NOT EXISTS (
-                            SELECT 1
-                            FROM EmployeeServices es2_inner
-                            WHERE es2_inner.EmployeeId = es2.EmployeeId
-                            AND es2_inner.ServiceId = es1.ServiceId
-                        )
-                    )
-                    AND es2.EmployeeId != {employeeId}
+        SELECT e2.*
+        FROM Employees e2
+        WHERE e2.Id IN (
+            SELECT es2.EmployeeId
+            FROM EmployeeServices es2
+            GROUP BY es2.EmployeeId
+            HAVING COUNT(DISTINCT es2.ServiceId) = (
+                SELECT COUNT(DISTINCT es1.ServiceId)
+                FROM EmployeeServices es1
+                WHERE es1.EmployeeId = {employeeId}
+            )
+            AND NOT EXISTS (
+                SELECT 1
+                FROM EmployeeServices es1
+                WHERE es1.EmployeeId = {employeeId}
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM EmployeeServices es2_inner
+                    WHERE es2_inner.EmployeeId = es2.EmployeeId
+                    AND es2_inner.ServiceId = es1.ServiceId
                 )
-                ").ToListAsync();
+            )
+            AND es2.EmployeeId != {employeeId}
+        )
+        ").ToListAsync();
 
             if (!employees.Any())
             {
@@ -249,10 +214,17 @@ namespace BeautySpaceInfrastructure.Controllers
 
 
 
+
         // Запит 7: Знаходження імен всіх клієнтів, у яких кількість бронювань така сама, як і у обраного клієнта
         public async Task<IActionResult> Query7(int? clientId)
         {
-            ViewBag.Clients = new SelectList(_context.Clients.OrderBy(c => c.LastName), "Id", "FullName");
+            // Вибір лише клієнтів з хоча б одним бронюванням
+            var clientsWithReservations = await _context.Clients
+                .Where(c => _context.Reservations.Any(r => r.ClientId == c.Id))
+                .OrderBy(c => c.LastName)
+                .ToListAsync();
+
+            ViewBag.Clients = new SelectList(clientsWithReservations, "Id", "FullName");
 
             if (clientId == null)
             {
@@ -261,18 +233,18 @@ namespace BeautySpaceInfrastructure.Controllers
 
             var clients = await _context.Clients
                 .FromSqlInterpolated($@"
-                SELECT c2.*
-                FROM Clients c2
-                JOIN Reservations r2 ON c2.Id = r2.ClientId
-                GROUP BY c2.Id, c2.FirstName, c2.LastName, c2.PhoneNumber, c2.Birthday, c2.Email
-                HAVING COUNT(r2.Id) = 
-                (
-                    SELECT COUNT(r3.Id)
-                    FROM Reservations r3
-                    WHERE r3.ClientId = {clientId}
-                )
-                AND c2.Id != {clientId}
-            ").ToListAsync();
+        SELECT c2.*
+        FROM Clients c2
+        JOIN Reservations r2 ON c2.Id = r2.ClientId
+        GROUP BY c2.Id, c2.FirstName, c2.LastName, c2.PhoneNumber, c2.Birthday, c2.Email
+        HAVING COUNT(r2.Id) = 
+        (
+            SELECT COUNT(r3.Id)
+            FROM Reservations r3
+            WHERE r3.ClientId = {clientId}
+        )
+        AND c2.Id != {clientId}
+    ").ToListAsync();
 
             if (!clients.Any())
             {
@@ -282,10 +254,16 @@ namespace BeautySpaceInfrastructure.Controllers
             return View(clients);
         }
 
+
         // Запит 8: Знайти клієнтів, у яких усі бронювання створені тільки до тих самих працівників як і у обраного клієнта
         public async Task<IActionResult> Query8(int? clientId)
         {
-            ViewBag.Clients = new SelectList(_context.Clients.OrderBy(c => c.LastName), "Id", "FullName");
+            var clientsWithReservations = await _context.Clients
+                .Where(c => _context.Reservations.Any(r => r.ClientId == c.Id))
+                .OrderBy(c => c.LastName)
+                .ToListAsync();
+
+            ViewBag.Clients = new SelectList(clientsWithReservations, "Id", "FullName");
 
             if (clientId == null)
             {
@@ -294,46 +272,47 @@ namespace BeautySpaceInfrastructure.Controllers
 
             var clients = await _context.Clients
                 .FromSqlInterpolated($@"
-                    SELECT c2.*
-                    FROM Clients c2
-                    WHERE NOT EXISTS 
-                    (
-                        SELECT es1.EmployeeId
-                        FROM Reservations r1
-                        JOIN TimeSlots ts1 ON r1.TimeSlotId = ts1.Id
-                        JOIN EmployeeServices es1 ON ts1.EmployeeServiceId = es1.Id
-                        WHERE r1.ClientId = {clientId}
-                        EXCEPT
-                        SELECT es2.EmployeeId
-                        FROM Reservations r2
-                        JOIN TimeSlots ts2 ON r2.TimeSlotId = ts2.Id
-                        JOIN EmployeeServices es2 ON ts2.EmployeeServiceId = es2.Id
-                        WHERE r2.ClientId = c2.Id
-                    )
-                    AND NOT EXISTS 
-                    (
-                        SELECT es3.EmployeeId
-                        FROM Reservations r3
-                        JOIN TimeSlots ts3 ON r3.TimeSlotId = ts3.Id
-                        JOIN EmployeeServices es3 ON ts3.EmployeeServiceId = es3.Id
-                        WHERE r3.ClientId = c2.Id
-                        EXCEPT
-                        SELECT es4.EmployeeId
-                        FROM Reservations r4
-                        JOIN TimeSlots ts4 ON r4.TimeSlotId = ts4.Id
-                        JOIN EmployeeServices es4 ON ts4.EmployeeServiceId = es4.Id
-                        WHERE r4.ClientId = {clientId}
-                    )
-                    AND c2.Id != {clientId}
-                    ").ToListAsync();
+            SELECT c2.*
+            FROM Clients c2
+            WHERE NOT EXISTS 
+            (
+                SELECT es1.EmployeeId
+                FROM Reservations r1
+                JOIN TimeSlots ts1 ON r1.TimeSlotId = ts1.Id
+                JOIN EmployeeServices es1 ON ts1.EmployeeServiceId = es1.Id
+                WHERE r1.ClientId = {clientId}
+                EXCEPT
+                SELECT es2.EmployeeId
+                FROM Reservations r2
+                JOIN TimeSlots ts2 ON r2.TimeSlotId = ts2.Id
+                JOIN EmployeeServices es2 ON ts2.EmployeeServiceId = es2.Id
+                WHERE r2.ClientId = c2.Id
+            )
+            AND NOT EXISTS 
+            (
+                SELECT es3.EmployeeId
+                FROM Reservations r3
+                JOIN TimeSlots ts3 ON r3.TimeSlotId = ts3.Id
+                JOIN EmployeeServices es3 ON ts3.EmployeeServiceId = es3.Id
+                WHERE r3.ClientId = c2.Id
+                EXCEPT
+                SELECT es4.EmployeeId
+                FROM Reservations r4
+                JOIN TimeSlots ts4 ON r4.TimeSlotId = ts4.Id
+                JOIN EmployeeServices es4 ON ts4.EmployeeServiceId = es4.Id
+                WHERE r4.ClientId = {clientId}
+            )
+            AND c2.Id != {clientId}
+        ").ToListAsync();
 
             if (!clients.Any())
             {
-                ViewBag.Message = "Клієнти, у яких усі бронювання тільки до тих самих працівників, не знайдено.";
+                ViewBag.Message = "Клієнтів, у яких усі бронювання тільки до тих самих працівників, не знайдено.";
             }
 
             return View(clients);
         }
+
 
 
     }

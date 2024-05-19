@@ -1,4 +1,4 @@
-﻿﻿@{
+﻿@{
     ViewData["Title"] = "Query4";
 }
 
@@ -14,6 +14,7 @@
             <div class="form-group">
                 <label for="totalReservationCost">Загальна сума бронювань</label>
                 <input type="text" class="form-control" id="totalReservationCost" placeholder="Введіть загальну суму бронювань" name="totalReservationCost" required>
+                <span id="errorSpan" style="color: red;"></span>
             </div>
             <div style="display: flex; margin-top: 15px; gap: 15px;">
                 <button type="submit" class="btn btn-primary">Надіслати запит</button>
@@ -49,3 +50,17 @@
     </div>
 
 </div>
+
+<script>
+    document.getElementById('totalReservationCost').addEventListener('input', function (event) {
+        let inputValue = event.target.value;
+        let errorSpan = document.getElementById('errorSpan');
+
+        if (/^\d+$/.test(inputValue)) {
+            errorSpan.textContent = '';
+        } else {
+            event.target.value = '';
+            errorSpan.textContent = 'Будь ласка, введіть лише цифрові символи.';
+        }
+    });
+</script>

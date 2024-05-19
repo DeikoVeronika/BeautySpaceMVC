@@ -14,6 +14,7 @@
             <div class="form-group">
                 <label for="serviceCount">Кількість послуг</label>
                 <input type="number" class="form-control" id="serviceCount" placeholder="Введіть кількість послуг" name="serviceCount" required>
+                <span id="errorSpan" style="color: red;"></span>
             </div>
             <div style="display: flex; margin-top: 15px; gap: 15px;">
                 <button type="submit" class="btn btn-primary">Надіслати запит</button>
@@ -47,3 +48,17 @@
     </div>
 
 </div>
+
+<script>
+    document.getElementById('serviceCount').addEventListener('input', function (event) {
+        let inputValue = event.target.value;
+        let errorSpan = document.getElementById('errorSpan');
+
+        if (/^\d+$/.test(inputValue) && parseInt(inputValue) > 0) {
+            errorSpan.textContent = '';
+        } else {
+            event.target.value = '';
+            errorSpan.textContent = 'Будь ласка, введіть додатнє число.';
+        }
+    });
+</script>
