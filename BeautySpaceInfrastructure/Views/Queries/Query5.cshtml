@@ -10,7 +10,7 @@
     <div id="employeesByServiceCount">
         <h3>Запит 5:</h3>
         <h4>Знайти всіх працівників, які надають задану кількість послуг</h4>
-        <form asp-controller="Queries" asp-action="Query5" method="post">
+        <form asp-controller="Queries" asp-action="Query5" method="post" class="query-form">
             <div class="form-group">
                 <label for="serviceCount">Кількість послуг</label>
                 <input type="number" class="form-control" id="serviceCount" placeholder="Введіть кількість послуг" name="serviceCount" required>
@@ -21,6 +21,10 @@
                 <a class="btn-back-new" asp-action="Index">Повернутися до запитів</a>
             </div>
         </form>
+        @if (!string.IsNullOrEmpty(ViewBag.Message))
+        {
+            <p>@ViewBag.Message</p>
+        }
         <table class="table">
             <thead>
                 <tr>
@@ -40,10 +44,7 @@
                 }
             </tbody>
         </table>
-        @if (!string.IsNullOrEmpty(ViewBag.Message))
-        {
-            <p>@ViewBag.Message</p>
-        }
+        
 
     </div>
 

@@ -10,7 +10,7 @@
     <div id="servicesByPosition">
         <h3>Запит 3:</h3>
         <h4>Знайти назви та вартість всіх послуг усіх працівників із певної посади</h4>
-        <form asp-controller="Queries" asp-action="Query3" method="post">
+        <form asp-controller="Queries" asp-action="Query3" method="post" class="query-form">
             <div class="form-group">
                 <label for="positionId">Посада</label>
                 <select class="form-control" id="positionId" name="positionId" asp-items="ViewBag.Positions" required></select>
@@ -20,6 +20,10 @@
                 <a class="btn-back-new" asp-action="Index">Повернутися до запитів</a>
             </div>
         </form>
+        @if (!string.IsNullOrEmpty(ViewBag.Message))
+        {
+            <p>@ViewBag.Message</p>
+        }
         <table class="table">
             <thead>
                 <tr>
@@ -37,10 +41,7 @@
                 }
             </tbody>
         </table>
-        @if (!string.IsNullOrEmpty(ViewBag.Message))
-        {
-            <p>@ViewBag.Message</p>
-        }
+        
 
     </div>
 

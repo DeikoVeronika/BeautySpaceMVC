@@ -10,7 +10,7 @@
     <div id="clientsByEmployees">
         <h3>Запит 8:</h3>
         <h4>Знайти клієнтів, у яких усі бронювання створені тільки до тих самих працівників як і у обраного клієнта</h4>
-        <form asp-controller="Queries" asp-action="Query8" method="post">
+        <form asp-controller="Queries" asp-action="Query8" method="post" class="query-form">
             <div class="form-group">
                 <label for="clientId">Клієнт</label>
                 <select class="form-control" id="clientId" name="clientId" asp-items="ViewBag.Clients" required></select>
@@ -20,6 +20,11 @@
                 <a class="btn-back-new" asp-action="Index">Повернутися до запитів</a>
             </div>
         </form>
+        @if (!string.IsNullOrEmpty(ViewBag.Message))
+        {
+            <p>@ViewBag.Message</p>
+        }
+
         <table class="table">
             <thead>
                 <tr>
@@ -37,11 +42,7 @@
                 }
             </tbody>
         </table>
-        @if (!string.IsNullOrEmpty(ViewBag.Message))
-        {
-            <p>@ViewBag.Message</p>
-        }
-
+        
     </div>
 
 </div>

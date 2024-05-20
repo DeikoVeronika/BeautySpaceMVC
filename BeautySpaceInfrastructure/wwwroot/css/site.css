@@ -316,3 +316,7 @@ h2 {
     max-width: 940px;
 }
 /*end home page*/
+
+.query-form {
+    margin-bottom: 20px;
+}

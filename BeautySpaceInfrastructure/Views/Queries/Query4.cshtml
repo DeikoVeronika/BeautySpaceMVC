@@ -10,7 +10,7 @@
     <div id="clientsByTotalReservationCost">
         <h3>Запит 4:</h3>
         <h4>Повернути всіх клієнтів, у яких загальна сума їхніх бронювань перевищує задану величину</h4>
-        <form asp-controller="Queries" asp-action="Query4" method="post">
+        <form asp-controller="Queries" asp-action="Query4" method="post" class="query-form">
             <div class="form-group">
                 <label for="totalReservationCost">Загальна сума бронювань</label>
                 <input type="text" class="form-control" id="totalReservationCost" placeholder="Введіть загальну суму бронювань" name="totalReservationCost" required>
@@ -21,6 +21,11 @@
                 <a class="btn-back-new" asp-action="Index">Повернутися до запитів</a>
             </div>
         </form>
+        @if (!string.IsNullOrEmpty(ViewBag.Message))
+        {
+            <p>@ViewBag.Message</p>
+        }
+
         <table class="table">
             <thead>
                 <tr>
@@ -42,11 +47,7 @@
                 }
             </tbody>
         </table>
-        @if (!string.IsNullOrEmpty(ViewBag.Message))
-        {
-            <p>@ViewBag.Message</p>
-        }
-
+        
     </div>
 
 </div>

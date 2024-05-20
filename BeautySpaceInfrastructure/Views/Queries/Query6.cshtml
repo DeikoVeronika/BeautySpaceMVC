@@ -10,7 +10,7 @@
     <div id="employeesByServices">
         <h3>Запит 6:</h3>
         <h4>Знаходження імен всіх працівників, які надають точно такі ж послуги як і обраний працівник</h4>
-        <form asp-controller="Queries" asp-action="Query6" method="post">
+        <form asp-controller="Queries" asp-action="Query6" method="post" class="query-form">
             <div class="form-group">
                 <label for="employeeId">Працівник</label>
                 <select class="form-control" id="employeeId" name="employeeId" asp-items="ViewBag.Employees" required></select>
@@ -20,6 +20,11 @@
                 <a class="btn-back-new" asp-action="Index">Повернутися до запитів</a>
             </div>
         </form>
+        @if (!string.IsNullOrEmpty(ViewBag.Message))
+        {
+            <p>@ViewBag.Message</p>
+        }
+
         <table class="table">
             <thead>
                 <tr>
@@ -37,10 +42,6 @@
                 }
             </tbody>
         </table>
-        @if (!string.IsNullOrEmpty(ViewBag.Message))
-        {
-            <p>@ViewBag.Message</p>
-        }
 
     </div>
 
