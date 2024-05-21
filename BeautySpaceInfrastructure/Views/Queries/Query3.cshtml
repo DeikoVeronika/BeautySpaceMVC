@@ -1,4 +1,4 @@
-﻿﻿@{
+﻿@{
     ViewData["Title"] = "Query3";
 }
 
@@ -7,42 +7,39 @@
         <h2>Запити</h2>
     </div>
 
-    <div id="servicesByPosition">
+    <div id="timeSlotsByCategory">
         <h3>Запит 3:</h3>
-        <h4>Знайти назви та вартість всіх послуг усіх працівників із певної посади</h4>
+        <h4>Пошук таймслотів за обраною категорією</h4>
+
         <form asp-controller="Queries" asp-action="Query3" method="post" class="query-form">
             <div class="form-group">
-                <label for="positionId">Посада</label>
-                <select class="form-control" id="positionId" name="positionId" asp-items="ViewBag.Positions" required></select>
+                <label for="categoryId">Оберіть категорію:</label>
+                <select class="form-control" id="categoryId" name="categoryId" asp-items="ViewBag.Categories" required></select>
             </div>
             <div style="display: flex; margin-top: 15px; gap: 15px;">
                 <button type="submit" class="btn btn-primary">Надіслати запит</button>
                 <a class="btn-back-new" asp-action="Index">Повернутися до запитів</a>
             </div>
         </form>
-        @if (!string.IsNullOrEmpty(ViewBag.Message))
-        {
-            <p>@ViewBag.Message</p>
-        }
+
         <table class="table">
             <thead>
                 <tr>
-                    <th>Назва послуги</th>
-                    <th>Ціна</th>
+                    <th>Дата</th>
+                    <th>Час початку</th>
+                    <th>Час завершення</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var service in Model)
+                @foreach (var timeSlot in Model)
                 {
                     <tr>
-                        <td>@service.Name</td>
-                        <td>@service.Price</td>
+                        <td>@timeSlot.Date</td>
+                        <td>@timeSlot.StartTime</td>
+                        <td>@timeSlot.EndTime</td>
                     </tr>
                 }
             </tbody>
         </table>
-        
-
     </div>
-
 </div>

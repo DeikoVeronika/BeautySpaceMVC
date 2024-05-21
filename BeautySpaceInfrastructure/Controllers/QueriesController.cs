@@ -36,33 +36,17 @@ namespace BeautySpaceInfrastructure.Controllers
 
             var categoryName = _context.Categories.Find(categoryId.Value)?.Name;
 
-            if (!services.Any())
-            {
-                ViewBag.Message = $"Послуг з обраною категорією {categoryName} та вартістю вище {minPrice} грн не знайдено.";
-            }
-            else
-            {
-                ViewBag.Message = $"Послуги обраної категорії {categoryName}, вартість яких більша за {minPrice} грн:";
-            }
+            SetServiceMessage(services, categoryName, minPrice.Value);
 
             return View(services);
         }
 
 
 
-        //Запит 2: Знайти клієнтів, які створили хоча б одне бронювання у працівника з обраним іменем (складний?)
+        //Запит 2: Знайти клієнтів, які створили хоча б одне бронювання у працівника з обраним іменем 
         public async Task<IActionResult> Query2(string employeeFirstName)
         {
-            var employeeNames = await _context.Employees
-                .Where(e => _context.EmployeeServices
-                    .Any(es => es.EmployeeId == e.Id &&
-                               _context.TimeSlots
-                                   .Any(ts => ts.EmployeeServiceId == es.Id &&
-                                              _context.Reservations.Any(r => r.TimeSlotId == ts.Id))))
-                .Select(e => e.FirstName)
-                .Distinct()
-                .OrderBy(name => name)
-                .ToListAsync();
+            var employeeNames = await GetEmployeeNamesAsync();
 
             ViewBag.EmployeeNames = new SelectList(employeeNames);
 
@@ -82,44 +66,29 @@ namespace BeautySpaceInfrastructure.Controllers
             WHERE e.FirstName = {employeeFirstName}")
                 .ToListAsync();
 
-            if (!clients.Any())
-            {
-                ViewBag.Message = $"Клієнти, які створили бронювання у працівника з ім'ям {employeeFirstName}, не знайдені.";
-            }
-            else
-            {
-                ViewBag.Message = $"Клієнти, які створили бронювання у працівника з ім'ям {employeeFirstName}:";
-            }
+            SetClientMessage(clients, employeeFirstName);
 
             return View(clients);
         }
 
-    //***  //Запит 3: Знайти назви та вартість всіх послуг усіх працівників із певної посади //дублює послуги для працівника. переписати запит
-        public async Task<IActionResult> Query3(int? positionId)
+        // Запит 3: Пошук таймслотів за обраною категорією
+        public async Task<IActionResult> Query3(int categoryId)
         {
-            ViewBag.Positions = new SelectList(_context.Positions.OrderBy(p => p.Name), "Id", "Name");
+            var categoriesWithTimeSlots = await GetCategoriesWithTimeSlotsAsync();
 
-            if (positionId == null)
-            {
-                return View(new List<Service>());
-            }
+            ViewBag.Categories = new SelectList(categoriesWithTimeSlots, "Id", "Name");
 
-            var services = await _context.Services
-                .FromSqlInterpolated($@"SELECT s.* FROM Services s
-                                JOIN EmployeeServices es ON s.Id = es.ServiceId
-                                JOIN Employees e ON es.EmployeeId = e.Id
-                                WHERE e.PositionId = {positionId}")
+            var timeSlots = await _context.TimeSlots
+                .FromSqlInterpolated($@"
+        SELECT ts.*
+        FROM TimeSlots ts
+        JOIN EmployeeServices es ON ts.EmployeeServiceId = es.Id
+        JOIN Services s ON es.ServiceId = s.Id
+        WHERE s.CategoryId = {categoryId}")
                 .ToListAsync();
 
-            if (!services.Any())
-            {
-                ViewBag.Message = "Послуги співробітників з обраною посадою не знайдено.";
-            }
-
-            return View(services);
+            return View(timeSlots);
         }
-
-
 
         // Запит 4: Повернути всіх клієнтів, у яких загальна сума їхніх бронювань перевищує задану величину (три таблиці: Reservations, Clients та Services)?
         public async Task<IActionResult> Query4(decimal? totalReservationCost)
@@ -138,18 +107,10 @@ namespace BeautySpaceInfrastructure.Controllers
             JOIN EmployeeServices es ON ts.EmployeeServiceId = es.Id
             JOIN Services s ON es.ServiceID = s.Id
             GROUP BY c.Id, c.FirstName, c.LastName, c.PhoneNumber, c.Birthday, c.Email
-            HAVING SUM(s.Price) > {totalReservationCost}
-        ")
+            HAVING SUM(s.Price) > {totalReservationCost}")
                 .ToListAsync();
 
-            if (!clients.Any())
-            {
-                ViewBag.Message = $"Клієнтів, у яких загальна сума бронювань перевищує {totalReservationCost} грн, не знайдено.";
-            }
-            else
-            {
-                ViewBag.Message = $"Клієнти, у яких загальна сума бронювань перевищує {totalReservationCost} грн:";
-            }
+            SetClientMessage(clients, totalReservationCost);
 
             return View(clients);
         }
@@ -166,22 +127,14 @@ namespace BeautySpaceInfrastructure.Controllers
 
             var employees = await _context.Employees
                 .FromSqlInterpolated($@"
-    SELECT e.Id, e.FirstName, e.LastName, e.PositionId, e.EmployeePortrait, e.PhoneNumber
-    FROM Employees e
-    JOIN EmployeeServices es ON e.Id = es.EmployeeID
-    GROUP BY e.Id, e.FirstName, e.LastName, e.PositionId, e.EmployeePortrait, e.PhoneNumber
-    HAVING COUNT(es.ServiceID) = {serviceCount}
-")
+            SELECT e.Id, e.FirstName, e.LastName, e.PositionId, e.EmployeePortrait, e.PhoneNumber
+            FROM Employees e
+            JOIN EmployeeServices es ON e.Id = es.EmployeeID
+            GROUP BY e.Id, e.FirstName, e.LastName, e.PositionId, e.EmployeePortrait, e.PhoneNumber
+            HAVING COUNT(es.ServiceID) = {serviceCount}")
                 .ToListAsync();
 
-            if (!employees.Any())
-            {
-                ViewBag.Message = $"Працівників, які надають задану кількість послуг ( {serviceCount} ), не знайдено.";
-            }
-            else
-            {
-                ViewBag.Message = $"Працівники, які надають задану кількість послуг {serviceCount}:";
-            }
+            SetEmployeeMessage(employees, serviceCount);
 
             return View(employees);
         }
@@ -189,13 +142,7 @@ namespace BeautySpaceInfrastructure.Controllers
         //Запит 6: Знаходження імен всіх працівників, які надають точно такі ж послуги як і обраний працівник
         public async Task<IActionResult> Query6(int? employeeId)
         {
-            // Вибір лише працівників з хоча б одним бронюванням
-            var employeesWithReservations = await _context.Employees
-                .Where(e => _context.Reservations
-                    .Join(_context.TimeSlots, r => r.TimeSlotId, ts => ts.Id, (r, ts) => new { r, ts })
-                    .Any(rt => rt.ts.EmployeeService.EmployeeId == e.Id))
-                .OrderBy(e => e.LastName)
-                .ToListAsync();
+            var employeesWithReservations = await GetEmployeesWithReservationsAsync();
 
             ViewBag.Employees = new SelectList(employeesWithReservations, "Id", "FullName");
 
@@ -206,31 +153,31 @@ namespace BeautySpaceInfrastructure.Controllers
 
             var employees = await _context.Employees
                 .FromSqlInterpolated($@"
-SELECT e2.*
-FROM Employees e2
-WHERE e2.Id IN (
-    SELECT es2.EmployeeId
-    FROM EmployeeServices es2
-    GROUP BY es2.EmployeeId
-    HAVING COUNT(DISTINCT es2.ServiceId) = (
-        SELECT COUNT(DISTINCT es1.ServiceId)
-        FROM EmployeeServices es1
-        WHERE es1.EmployeeId = {employeeId}
-    )
-    AND NOT EXISTS (
-        SELECT 1
-        FROM EmployeeServices es1
-        WHERE es1.EmployeeId = {employeeId}
-        AND NOT EXISTS (
-            SELECT 1
-            FROM EmployeeServices es2_inner
-            WHERE es2_inner.EmployeeId = es2.EmployeeId
-            AND es2_inner.ServiceId = es1.ServiceId
-        )
-    )
-    AND es2.EmployeeId != {employeeId}
-)
-").ToListAsync();
+                SELECT e2.*
+                FROM Employees e2
+                WHERE e2.Id IN (
+                    SELECT es2.EmployeeId
+                    FROM EmployeeServices es2
+                    GROUP BY es2.EmployeeId
+                    HAVING COUNT(DISTINCT es2.ServiceId) = (
+                        SELECT COUNT(DISTINCT es1.ServiceId)
+                        FROM EmployeeServices es1
+                        WHERE es1.EmployeeId = {employeeId}
+                    )
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM EmployeeServices es1
+                        WHERE es1.EmployeeId = {employeeId}
+                        AND NOT EXISTS (
+                            SELECT 1
+                            FROM EmployeeServices es2_inner
+                            WHERE es2_inner.EmployeeId = es2.EmployeeId
+                            AND es2_inner.ServiceId = es1.ServiceId
+                        )
+                    )
+                    AND es2.EmployeeId != {employeeId}
+                )
+                ").ToListAsync();
 
             var employeeName = _context.Employees.Find(employeeId.Value)?.FirstName;
 
@@ -246,18 +193,10 @@ WHERE e2.Id IN (
             return View(employees);
         }
 
-
-
-
-
         // Запит 7: Знаходження імен всіх клієнтів, у яких кількість бронювань така сама, як і у обраного клієнта
         public async Task<IActionResult> Query7(int? clientId)
         {
-            // Вибір лише клієнтів з хоча б одним бронюванням
-            var clientsWithReservations = await _context.Clients
-                .Where(c => _context.Reservations.Any(r => r.ClientId == c.Id))
-                .OrderBy(c => c.LastName)
-                .ToListAsync();
+            var clientsWithReservations = await GetClientsWithReservationsAsync();
 
             ViewBag.Clients = new SelectList(clientsWithReservations, "Id", "FullName");
 
@@ -268,42 +207,30 @@ WHERE e2.Id IN (
 
             var clients = await _context.Clients
                 .FromSqlInterpolated($@"
-        SELECT c2.*
-        FROM Clients c2
-        JOIN Reservations r2 ON c2.Id = r2.ClientId
-        GROUP BY c2.Id, c2.FirstName, c2.LastName, c2.PhoneNumber, c2.Birthday, c2.Email
-        HAVING COUNT(r2.Id) = 
-        (
-            SELECT COUNT(r3.Id)
-            FROM Reservations r3
-            WHERE r3.ClientId = {clientId}
-        )
-        AND c2.Id != {clientId}
-    ").ToListAsync();
+            SELECT c2.*
+            FROM Clients c2
+            JOIN Reservations r2 ON c2.Id = r2.ClientId
+            GROUP BY c2.Id, c2.FirstName, c2.LastName, c2.PhoneNumber, c2.Birthday, c2.Email
+            HAVING COUNT(r2.Id) = 
+            (
+                SELECT COUNT(r3.Id)
+                FROM Reservations r3
+                WHERE r3.ClientId = {clientId}
+            )
+            AND c2.Id != {clientId}
+        ").ToListAsync();
 
             var clientName = _context.Clients.Find(clientId.Value)?.FirstName;
 
-            if (!clients.Any())
-            {
-                ViewBag.Message = $"Клієнтів з такою ж кількістю бронювань як у клієнта {clientName} не знайдено.";
-            }
-            else
-            {
-                ViewBag.Message = $"Клієнти з такою ж кількістю бронювань як у клієнта {clientName}:";
-            }
+            ViewBag.Message = SetMessageForClients(clients, clientName);
 
             return View(clients);
         }
 
-
         // Запит 8: Знайти клієнтів, у яких усі бронювання створені тільки до тих самих працівників як і у обраного клієнта
         public async Task<IActionResult> Query8(int? clientId)
         {
-            var clientsWithReservations = await _context.Clients
-                .Where(c => _context.Reservations.Any(r => r.ClientId == c.Id))
-                .OrderBy(c => c.LastName)
-                .ToListAsync();
-
+            var clientsWithReservations = await GetClientsWithReservationsAsync();
             ViewBag.Clients = new SelectList(clientsWithReservations, "Id", "FullName");
 
             if (clientId == null)
@@ -348,18 +275,125 @@ WHERE e2.Id IN (
 
             var clientName = _context.Clients.Find(clientId.Value)?.FirstName;
 
-            if (!clients.Any())
-            {
-                ViewBag.Message = $"Клієнтів, у яких усі бронювання тільки до тих самих працівників, як у клієнта {clientName}, не знайдено.";
-            }
-            else
-            {
-                ViewBag.Message = $"Клієнти, у яких усі бронювання тільки до тих самих працівників, як у клієнта {clientName}:";
-            }
+            ViewBag.Message = SetMessageForClientsIdenticalReservation(clients, clientName);
 
             return View(clients);
         }
 
+
+        private async Task<List<string>> GetEmployeeNamesAsync()
+        {
+            return await _context.Employees
+                .Where(e => _context.EmployeeServices
+                    .Any(es => es.EmployeeId == e.Id &&
+                               _context.TimeSlots
+                                   .Any(ts => ts.EmployeeServiceId == es.Id &&
+                                              _context.Reservations.Any(r => r.TimeSlotId == ts.Id))))
+                .Select(e => e.FirstName)
+                .Distinct()
+                .OrderBy(name => name)
+                .ToListAsync();
+        }
+
+        private async Task<List<Category>> GetCategoriesWithTimeSlotsAsync()
+        {
+            return await _context.Categories
+                .Where(c => _context.Services
+                    .Where(s => s.CategoryId == c.Id)
+                    .Any(s => _context.EmployeeServices
+                        .Where(es => es.ServiceId == s.Id)
+                        .Any(es => _context.TimeSlots.Any(ts => ts.EmployeeServiceId == es.Id))))
+                .ToListAsync();
+        }
+
+        private async Task<List<Employee>> GetEmployeesWithReservationsAsync()
+        {
+            return await _context.Employees
+                .Where(e => _context.Reservations
+                    .Join(_context.TimeSlots, r => r.TimeSlotId, ts => ts.Id, (r, ts) => new { r, ts })
+                    .Any(rt => rt.ts.EmployeeService.EmployeeId == e.Id))
+                .OrderBy(e => e.LastName)
+                .ToListAsync();
+        }
+
+        private async Task<List<Client>> GetClientsWithReservationsAsync()
+        {
+            return await _context.Clients
+                .Where(c => _context.Reservations.Any(r => r.ClientId == c.Id))
+                .OrderBy(c => c.LastName)
+                .ToListAsync();
+        }
+
+        private void SetServiceMessage(IEnumerable<Service> services, string categoryName, decimal minPrice)
+        {
+            if (!services.Any())
+            {
+                ViewBag.Message = $"Послуг з обраною категорією {categoryName} та вартістю вище {minPrice} грн не знайдено.";
+            }
+            else
+            {
+                ViewBag.Message = $"Послуги обраної категорії {categoryName}, вартість яких більша за {minPrice} грн:";
+            }
+        }
+
+        private void SetClientMessage(IEnumerable<Client> clients, string employeeFirstName)
+        {
+            if (!clients.Any())
+            {
+                ViewBag.Message = $"Клієнти, які створили бронювання у працівника з ім'ям {employeeFirstName}, не знайдені.";
+            }
+            else
+            {
+                ViewBag.Message = $"Клієнти, які створили бронювання у працівника з ім'ям {employeeFirstName}:";
+            }
+        }
+
+        private void SetClientMessage(IEnumerable<Client> clients, decimal? totalReservationCost)
+        {
+            if (!clients.Any())
+            {
+                ViewBag.Message = $"Клієнтів, у яких загальна сума бронювань перевищує {totalReservationCost} грн, не знайдено.";
+            }
+            else
+            {
+                ViewBag.Message = $"Клієнти, у яких загальна сума бронювань перевищує {totalReservationCost} грн:";
+            }
+        }
+
+        private void SetEmployeeMessage(IEnumerable<Employee> employees, int? serviceCount)
+        {
+            if (!employees.Any())
+            {
+                ViewBag.Message = $"Працівників, які надають задану кількість послуг ({serviceCount}), не знайдено.";
+            }
+            else
+            {
+                ViewBag.Message = $"Працівники, які надають задану кількість послуг ({serviceCount}):";
+            }
+        }
+        private string SetMessageForClients(List<Client> clients, string clientName)
+        {
+            if (!clients.Any())
+            {
+                return $"Клієнтів з такою ж кількістю бронювань як у клієнта {clientName} не знайдено.";
+            }
+            else
+            {
+                return $"Клієнти з такою ж кількістю бронювань як у клієнта {clientName}:";
+            }
+        }
+
+        private string SetMessageForClientsIdenticalReservation(List<Client> clients, string clientName)
+        {
+            if (!clients.Any())
+            {
+                return $"Клієнтів, у яких усі бронювання тільки до тих самих працівників, як у клієнта {clientName}, не знайдено.";
+            }
+            else
+            {
+                return $"Клієнти, у яких усі бронювання тільки до тих самих працівників, як у клієнта {clientName}:";
+            }
+        }
 
 
     }
